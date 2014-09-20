@@ -113,15 +113,15 @@ function Figure(posX, posY, imgPath, figure, state,index) {
     }
     //Возможно ли поставить фигуру на пустую клетку
     this.checkStepTableItem = function (Nx, Ny, allies, enemies, tableMap, checkX, checkY) {
-    
-        
+
+
         if (checkX != undefined) {
             if (Nx == checkX && Ny == checkY) {
                 
                 return true;
             }
         } else {
-            
+
             var xTemp = this.x;
             var yTemp = this.y;
             this.x = Nx;
@@ -277,14 +277,20 @@ function Figure(posX, posY, imgPath, figure, state,index) {
                     if (!x.turned && x.Type == 'L') {
                         
                         if (x.x < current.x && !tableMap[current.y][current.x-2].isBusy(allies, enemies) && !tableMap[current.y][current.x-1].isBusy(allies, enemies)) {
-                            x.x += 3;
-                            (current.checkStepTableItem(current.x - 2, current.y, allies, enemies, tableMap, checkX, checkY));
-                            x.x -= 3;
+
+                            if (tableMap[current.y][current.x - 1].Attacked) {
+                                x.x += 3;
+                                (current.checkStepTableItem(current.x - 2, current.y, allies, enemies, tableMap, checkX, checkY));
+                                x.x -= 3;
+                            }
                         }
                         if (x.x > current.x && !tableMap[current.y][current.x+2].isBusy(allies, enemies) && !tableMap[current.y][current.x+1].isBusy(allies, enemies)) {
-                            x.x += 2;
-                            (current.checkStepTableItem(current.x + 2, current.y, allies, enemies, tableMap, checkX, checkY));
-                            x.x -= 2;
+                            if (tableMap[current.y][current.x + 1].Attacked) {
+                                x.x += 2;
+                                (current.checkStepTableItem(current.x + 2, current.y, allies, enemies, tableMap, checkX, checkY));
+                                x.x -= 2;
+                            }
+
                         }
                     }
                 }
@@ -346,7 +352,10 @@ function Figure(posX, posY, imgPath, figure, state,index) {
         {
           
                 Nx = Number(current.x) + Number(dx);
-          
+
+            if (tableMap[Ny] && tableMap[Ny][Nx] && tableMap[Ny][Nx].isOverStep && current.checkStepTableItem(Nx, Ny, allies, enemies, tableMap, checkX, checkY)) {
+                return true;
+            }
             if (current.checkEnemyTableItem(Nx, Ny, allies, enemies, tableMap, checkX, checkY))
                 return true;
         }
@@ -392,7 +401,31 @@ function Figure(posX, posY, imgPath, figure, state,index) {
     this.step = function (allies, enemies, tableMap, newY, newX) {
         
         this.turned = true;
-      
+        if (this.Type == 'S') {
+            if (tableMap[newY][newX].isOverStep) {
+                if (newY == 2)
+                    tableMap[Number(newY) + 1][newX].Attack(allies, enemies, tableMap);
+                else
+                    tableMap[Number(newY) - 1][newX].Attack(allies, enemies, tableMap);
+            }
+            if (newY - this.y === 2) {
+                if (newY == 3)
+                    tableMap[newY - 1][newX].isOverStep = true;
+                else
+                    tableMap[newY + 1][newX].isOverStep = true
+            } else {
+                for (var i = 0; i < 8; i++)
+                    for (var j = 0; j < 8; j++) {
+                        tableMap[i][j].isOverStep = false;
+                    }
+            }
+        } else {
+            for (var i = 0; i < 8; i++)
+                for (var j = 0; j < 8; j++) {
+                    tableMap[i][j].isOverStep = false;
+                }
+        }
+
         tableMap[newY][newX].Attack(allies, enemies, tableMap);
         if (this.Type == "K" && (newX - this.x > 1 || newX - this.x < -1)) {
             var complete = false;
@@ -410,6 +443,7 @@ function Figure(posX, posY, imgPath, figure, state,index) {
                 }
             }
         }
+
         if (this.Type == "S" && (newY == 0 || newY == 7)) {
             var cases = ["ферзь","слон","конь","ладья"];
             var i = 0;
